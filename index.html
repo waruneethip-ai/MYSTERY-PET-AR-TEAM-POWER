@@ -1,11 +1,186 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#124b41"><meta name="description" content="A cooperative webcam English detective game for Grade 6. Nine teams, nine mystery pets, two AR challenges."><title>Mystery Pet AR · Team Power</title><link rel="stylesheet" href="css/style.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#10214f">
+  <title>Mystery Pet AR: Team Power</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
 <body>
-<header class="topbar"><a class="brand" href="./" aria-label="Mystery Pet AR home"><span class="brand-icon">⌕</span><span>MYSTERY PET <b>AR</b><small>THE JUNIOR DETECTIVE AGENCY</small></span></a><div class="top-status"><span id="camera-status" class="status">● CAMERA OFF</span><button id="sound" class="icon-button" aria-label="Mute sound" title="Sound on">♫</button><button id="teacher-toggle" class="outline" aria-expanded="false" aria-controls="teacher">⚙ Teacher</button></div></header>
-<main id="app"></main>
-<aside id="teacher" class="teacher-panel" hidden><div class="panel-title"><h2>Teacher controls</h2><button id="teacher-close" aria-label="Close teacher controls">×</button></div><p>Keep this panel closed during play.</p><div class="control-grid"><button id="pause">Pause</button><button id="restart">Restart current group</button><button id="skip">Skip group</button><button id="recalibrate">Camera recalibrate</button><button id="camera-retry">Start / retry camera</button><button id="new-session">New class session</button></div><label class="toggle"><input type="checkbox" id="debug"> Teacher Debug Mode</label><div id="debug-controls" hidden><p class="debug-note">SIMULATION · Practice scores only. Camera tracking is stopped. Turn off to return to a fresh real class session.</p><div class="selects"><label>Group<select id="debug-group"><option value="">Random</option></select></label><label>Mission<select id="debug-mission"><option value="">Random</option></select></label></div><button id="demo-start">Start simulation</button><button id="solve">Arrange words correctly</button><button id="hands-correct">Aim palms at correct answer</button><button id="hands-wrong">Aim palms at wrong answer</button><button id="hands-split">Split team / break consensus</button><button id="hands-none">Hide all palms</button><p>Drag word badges or palms in the play area. Focus a badge and use arrow keys to move it. Tests use the same 2-second and 5-second timers as live play.</p></div><label class="toggle"><input type="checkbox" id="landmarks"> Show tracking landmarks / FPS</label><output id="performance"></output></aside>
-<dialog id="help"><button class="dialog-close" aria-label="Close instructions">×</button><span class="eyebrow">DETECTIVE FIELD GUIDE</span><h2>Two challenges. One team.</h2><ol><li><b>Wear your player colors.</b> Red, blue, green and yellow badges go on your chest. Stand apart, with your upper bodies and badges in view.</li><li><b>Build the question.</b> Each player carries one word card. Move left and right until the sentence is correct. Hold for 2 seconds!</li><li><b>Power up your answer.</b> Discuss, then show open palms to the camera. Move palms underneath your answer. At least 3 palms must agree for 5 continuous seconds.</li></ol><p>Extra teammates are Question Captains. The color mission needs only 3 word players. Wrong answers get a silly surprise—then you try again!</p><p class="tip">Teacher setup: landscape screen, bright even light, clear floor space, solid colored chest badges. Keep captains outside the camera during calibration.</p><button class="primary dialog-close">Got it. Let's play!</button></dialog>
-<dialog id="confirm"><h2 id="confirm-title"></h2><p id="confirm-text"></p><div class="actions"><button id="confirm-cancel">Cancel</button><button id="confirm-ok" class="primary">Continue</button></div></dialog>
-<div id="notice" role="status" aria-live="polite"></div><script type="module" src="js/app.js"></script>
-</body></html>
+  <section id="startScreen" class="screen start bg">
+    <span class="paw p1">🐾</span><span class="paw p2">🐾</span>
+    <div class="start-card panel">
+      <div class="logo">🔎 GRADE 6 ENGLISH • MYSTERY PET</div>
+      <div class="magnify">🕵️‍♀️🐾</div>
+      <h1>MYSTERY PET AR</h1>
+      <h2>TEAM POWER</h2>
+      <p class="tagline">Move together. Build the question. Power up the answer!</p>
+      <div class="steps">
+        <div class="step"><b>🧍↔️🧍</b>BUILD THE QUESTION</div>
+        <div class="step"><b>🖐️⚡🖐️</b>TEAM POWER SYNC</div>
+        <div class="step"><b>🏆</b>WIN 20 POINTS</div>
+      </div>
+      <div class="start-actions">
+        <button id="cameraBtn" class="primary">📷 START CAMERA</button>
+        <button id="startBtn" class="primary">▶ START GAME</button>
+        <button id="howBtn" class="secondary">❔ HOW TO PLAY</button>
+      </div>
+      <p id="startStatus" class="camera-note">Camera needs HTTPS or localhost • Allow camera permission • Landscape mode recommended</p>
+    </div>
+  </section>
 
+  <section id="randomScreen" class="screen random bg hidden">
+    <div class="random-card panel">
+      <div class="logo">🎡 RANDOM GROUP MISSION</div>
+      <h1>WHO PLAYS NEXT?</h1>
+      <p id="roundText" class="round-note">Round 1 of 9 • Every group plays once</p>
+      <div id="groupCards" class="groups" aria-label="Groups 1 to 9"></div>
+      <div id="roulette" class="roulette"><strong>PRESS RANDOM GROUP!</strong></div>
+      <div class="actions random-actions">
+        <button id="randomBtn" class="primary">🎲 RANDOM GROUP</button>
+        <button id="missionBtn" class="primary hidden">🔎 START MISSION</button>
+        <button id="randomHomeBtn" class="small">⌂ Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <main id="gameScreen" class="screen game hidden">
+    <video id="camera" class="camera" autoplay playsinline muted></video>
+    <div class="camera-dim"></div>
+    <canvas id="arCanvas" class="ar-canvas"></canvas>
+    <header class="hud">
+      <div class="brand">🔎 MYSTERY PET AR • TEAM POWER</div>
+      <div id="hudRound" class="pill">ROUND 1 / 9</div>
+      <div id="hudGroup" class="pill">GROUP 1</div>
+      <div id="hudScore" class="pill">⭐ 0 / 20</div>
+      <div id="cameraStatus" class="pill">CAMERA OFF</div>
+      <div id="detectStatus" class="pill">WAITING</div>
+      <button id="teacherBtn" class="pill">⚙ TEACHER</button>
+    </header>
+
+    <section class="stage-title">
+      <div id="stageEyebrow" class="eyebrow">STAGE 1</div>
+      <h1 id="stageHeading">HUMAN SENTENCE BUILDER</h1>
+      <div class="mission-strip"><span id="missionPet">🐹 HAMSTER</span><span>•</span><b id="missionCategory">🥕 FOOD</b></div>
+    </section>
+
+    <aside id="captainCard" class="captain hidden">
+      <h3>🕵️ QUESTION CAPTAIN</h3>
+      <label><input type="checkbox"> WH-word</label>
+      <label><input type="checkbox"> does / is</label>
+      <label><input type="checkbox"> subject</label>
+      <label><input type="checkbox"> verb</label>
+      <label><input type="checkbox"> meaning</label>
+    </aside>
+
+    <section id="calibration" class="calibration hidden">
+      <h2>PLAYERS, STAND STILL!</h2>
+      <p>Hold the RED, BLUE, GREEN and YELLOW badges near your chest.</p>
+      <div id="playerChecks" class="player-checks"></div>
+      <div class="actions" style="margin-top:10px">
+        <button id="calibrateBtn" class="primary">START CALIBRATION</button>
+        <button id="skipCalibrationBtn" class="small hidden">DEBUG: SKIP</button>
+      </div>
+    </section>
+
+    <div id="wordLayer"></div>
+    <div id="fixedQuestion" class="fixed-question hidden">?</div>
+    <div id="stage1Hold" class="hold-wrap hidden">
+      <div id="stage1HoldLabel" class="hold-label">HOLD THE ORDER! 0%</div>
+      <div class="meter"><div id="stage1Meter"></div></div>
+    </div>
+    <div id="sentencePreview" class="sentence-preview hidden"></div>
+
+    <section id="stage2Intro" class="stage2-intro hidden">
+      <h2>TALK WITH YOUR TEAM!</h2>
+      <p id="introQuestion">What does it eat?</p>
+      <button id="palmsBtn" class="primary">🖐️ OPEN YOUR PALMS!</button>
+    </section>
+    <div id="completedQuestion" class="completed-question hidden"></div>
+    <section id="answers" class="answers hidden"></section>
+    <div id="palmLayer"></div>
+    <div id="debugPalms" class="debug-palms hidden">
+      <button data-choice="0">🖐🖐🖐 → A</button><button data-choice="1">🖐🖐🖐 → B</button><button data-choice="2">🖐🖐🖐 → C</button><button data-choice="off">NO PALMS</button>
+    </div>
+    <section id="powerPanel" class="power hidden">
+      <div class="power-title"><span id="powerMessage">NEED 3 OPEN PALMS</span><b id="powerPercent">0%</b></div>
+      <div class="meter"><div id="powerMeter"></div></div>
+    </section>
+
+    <div id="feedback" class="feedback hidden"></div>
+    <div id="pauseLayer" class="pause hidden">⏸ PAUSED</div>
+    <div id="statusLine" class="status">Teacher: start calibration when players are ready.</div>
+
+    <aside id="teacherPanel" class="teacher hidden">
+      <button id="teacherClose" class="close">✕</button>
+      <h3>Teacher Controls</h3>
+      <div class="teacher-grid">
+        <button id="pauseBtn" class="small">⏸ Pause</button>
+        <button id="recalibrateBtn" class="small">🎯 Recalibrate</button>
+        <button id="restartBtn" class="small">↻ Restart Group</button>
+        <button id="skipBtn" class="small">⏭ Skip Group</button>
+        <button id="flipBtn" class="small">↔ Flip Camera</button>
+        <button id="soundBtn" class="small active">🔊 Sound</button>
+        <button id="debugBtn" class="small wide">🧪 Debug Mode: OFF</button>
+        <div id="debugBox" class="debug-box hidden">
+          <div id="debugReadout">Debug ready.</div>
+          <label>Mission <select id="missionSelect"></select></label>
+          <div class="debug-controls">
+            <button id="debugStage1" class="small">Test Stage 1</button>
+            <button id="debugStage2" class="small">Test Stage 2</button>
+            <button id="debugCorrect" class="small">Correct FX</button>
+            <button id="debugWrong" class="small">Wrong FX</button>
+          </div>
+        </div>
+        <button id="teacherHomeBtn" class="small wide">⌂ Main Menu</button>
+      </div>
+    </aside>
+  </main>
+
+  <section id="resultScreen" class="screen group-result bg hidden">
+    <div class="result-card panel">
+      <div class="logo">✅ STAGE COMPLETE!</div>
+      <h1 id="resultGroup">GROUP 1</h1>
+      <div id="resultPet" class="result-pet">🐹</div>
+      <div id="resultScore" class="score-big">20 / 20</div>
+      <div class="score-parts">
+        <div class="score-part">STAGE 1<b id="resultStage1">10</b></div>
+        <div class="score-part">STAGE 2<b id="resultStage2">10</b></div>
+      </div>
+      <div class="actions"><button id="nextGroupBtn" class="primary">🎡 NEXT GROUP</button></div>
+    </div>
+  </section>
+
+  <section id="finalScreen" class="screen final bg hidden">
+    <div class="final-card panel">
+      <div class="logo">🏆 MYSTERY PET DETECTIVE REPORT</div>
+      <h1>FINAL SCOREBOARD</h1>
+      <p id="winnerLine" class="winner-line"></p>
+      <table class="score-table">
+        <thead><tr><th>Group</th><th>Mystery Pet</th><th>Stage 1</th><th>Stage 2</th><th>Total</th></tr></thead>
+        <tbody id="scoreBody"></tbody>
+      </table>
+      <div class="actions"><button id="newGameBtn" class="primary">🔁 NEW CLASS GAME</button><button id="finalHomeBtn" class="secondary">⌂ MAIN MENU</button></div>
+    </div>
+  </section>
+
+  <div id="howModal" class="modal hidden">
+    <div class="modal-card">
+      <button class="close" data-close="howModal">✕</button>
+      <h2>🔎 HOW TO PLAY</h2>
+      <ol>
+        <li>Teacher presses <b>RANDOM GROUP</b>. Every group and pet mission appears only once.</li>
+        <li><b>Stage 1:</b> 3–4 students wear colored badges. Move left or right until the question chunks are in the correct order. Hold for 2 seconds.</li>
+        <li>The <b>Question Captain</b> checks the grammar and meaning.</li>
+        <li><b>Stage 2:</b> Discuss, then show at least 3 open palms under the same answer. Keep Team Power synchronized for 5 seconds.</li>
+        <li>A wrong answer becomes a silly monster. Try again—there is no penalty.</li>
+      </ol>
+      <p><b>Camera tip:</b> Place the laptop 2–3 metres away in landscape view. Use bright colored badge cards near each player’s chest.</p>
+      <div class="actions"><button class="primary" data-close="howModal">GOT IT!</button></div>
+    </div>
+  </div>
+  <div class="rotate"><div><span>↻ 📱</span>Please use landscape mode.</div></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
